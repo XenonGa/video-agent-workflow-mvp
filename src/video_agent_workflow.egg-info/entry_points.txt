@@ -1,0 +1,2 @@
+[console_scripts]
+video-agent-mvp = video_agent_workflow.run:app
