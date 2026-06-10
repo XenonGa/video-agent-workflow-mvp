@@ -101,3 +101,85 @@ positive_prompt 要求:
 - 包含地点、时间、色彩、灯光、道具、气氛。
 - 不要把人物画成主角；可以出现 very small silhouettes 但重点是场景。
 """
+
+STORYBOARD_SYSTEM = """你是专业分镜导演和摄影指导。
+只输出合法 JSON 数组，不要输出 Markdown，不要解释。"""
+
+STORYBOARD_USER_TEMPLATE = """根据脚本、人物参考图路径和场景参考图路径，为每个镜头生成可执行分镜计划。
+
+脚本 JSON:
+{script_json}
+
+人物参考图:
+{character_images_json}
+
+场景参考图:
+{scene_images_json}
+
+输出 JSON 数组，每项:
+{{
+  "shot_id": "shot_001",
+  "scene_id": "scene_001",
+  "duration_seconds": 5,
+  "shot_size": "wide shot / medium shot / close-up",
+  "camera_angle": "eye level / low angle / high angle / over shoulder",
+  "camera_movement": "static / slow dolly in / pan left / handheld",
+  "blocking": [
+    {{
+      "character_id": "char_001",
+      "position": "left / center / right / foreground / background",
+      "action": "动作",
+      "scale": "small / medium / large"
+    }}
+  ],
+  "props": ["道具"],
+  "color_palette": "色彩与光线",
+  "visual_prompt": "英文视频生成 prompt，包含人物站位、景别、视角、道具、色彩、动作、电影感",
+  "negative_prompt": "英文负面 prompt"
+}}
+
+要求:
+- 每个脚本镜头都必须有一个分镜项。
+- visual_prompt 要适合图生视频/参考图生视频模型。
+- blocking 必须描述人物站位和动作。
+"""
+
+AUDIO_PLAN_SYSTEM = """你是电影声音设计师。
+只输出合法 JSON，不要输出 Markdown，不要解释。"""
+
+AUDIO_PLAN_USER_TEMPLATE = """根据以下脚本和分镜计划生成声音设计。
+
+脚本 JSON:
+{script_json}
+
+分镜 JSON:
+{storyboard_json}
+
+输出 JSON:
+{{
+  "bgm_prompt": "英文背景音乐生成 prompt，包含风格、情绪、节奏、乐器",
+  "dialogues": [
+    {{
+      "shot_id": "shot_001",
+      "speaker": "人物名或人物id",
+      "text": "对白文本",
+      "start_seconds": 0,
+      "duration_seconds": 3
+    }}
+  ],
+  "sfx": [
+    {{
+      "shot_id": "shot_001",
+      "cue_type": "ambient / foley / impact",
+      "prompt": "英文音效生成 prompt",
+      "start_seconds": 0,
+      "duration_seconds": 3
+    }}
+  ]
+}}
+
+要求:
+- 对白来自脚本，不要凭空增加长对白。
+- 每个场景至少给一个环境音或 Foley。
+- BGM prompt 要适合文本生成音乐模型。
+"""

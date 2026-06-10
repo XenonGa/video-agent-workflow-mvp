@@ -40,6 +40,14 @@ def main(prompt: str, project_id: str | None = None) -> None:
         console.print(f"Character image: {path}")
     for path in final_state.get("scene_images", []):
         console.print(f"Scene image: {path}")
+    for path in final_state.get("animatic_videos", []):
+        console.print(f"Animatic: {path}")
+    for path in final_state.get("shot_videos", []):
+        console.print(f"Shot video: {path}")
+    if final_state.get("mixed_audio"):
+        console.print(f"Mixed audio: {final_state['mixed_audio']}")
+    if final_state.get("final_video"):
+        console.print(f"[bold green]Final video:[/bold green] {final_state['final_video']}")
 
 
 if __name__ == "__main__":

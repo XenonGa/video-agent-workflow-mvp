@@ -2,13 +2,15 @@
 
 This MVP implements the first part of a local video-generation agent workflow:
 
-`prompt -> script JSON -> character sheets with three views -> scene concept images`
+`prompt -> script JSON -> character sheets with three views -> scene concept images -> storyboard animatics -> shot videos -> audio -> sync -> final video`
 
 It uses:
 
 - LangGraph for orchestration.
 - A local OpenAI-compatible LLM endpoint for script and prompt planning.
 - ComfyUI HTTP/WebSocket API for image generation.
+- Local Python generators for storyboard draft videos and placeholder audio.
+- Optional command-template hooks for video, TTS, BGM, SFX, and lip-sync models.
 
 The project is designed for local open-source models. It does not require OpenAI or other paid APIs.
 
@@ -103,10 +105,66 @@ outputs/<project_id>/
   script.json
   character_prompts.json
   scene_prompts.json
+  storyboard.json
+  audio_plan.json
   characters/*.png
   scenes/*.png
+  animatics/*/*.mp4
+  videos/*/*.mp4
+  audio/*.wav
+  synced/*.mp4
+  final/final_video.mp4
   state.json
 ```
+
+## 6. Replace Placeholder Backends
+
+The default pipeline runs end-to-end without video/audio generation models:
+
+```env
+VIDEO_BACKEND=animatic
+VOICE_BACKEND=placeholder
+BGM_BACKEND=placeholder
+SFX_BACKEND=placeholder
+SYNC_BACKEND=passthrough
+```
+
+To connect external open-source models, switch a backend to `command` and provide a command template.
+
+### Video Model Command
+
+Example shape:
+
+```env
+VIDEO_BACKEND=command
+VIDEO_COMMAND=python /models/Wan2.2/generate_i2v.py --shot_json {shot_json} --prompt {prompt} --characters {character_refs} --scene {scene_ref} --animatic {animatic} --output {output}
+```
+
+The command must create `{output}`.
+
+### Voice / BGM / SFX Commands
+
+```env
+VOICE_BACKEND=command
+VOICE_COMMAND=python /models/CosyVoice/infer.py --text {text} --speaker {speaker} --output {output}
+
+BGM_BACKEND=command
+BGM_COMMAND=python /models/ACE-Step/infer.py --prompt {prompt} --duration {duration} --output {output}
+
+SFX_BACKEND=command
+SFX_COMMAND=python /models/audio_sfx/infer.py --prompt {prompt} --duration {duration} --output {output}
+```
+
+Each command must create `{output}` as a WAV file.
+
+### Lip Sync Command
+
+```env
+SYNC_BACKEND=command
+SYNC_COMMAND=python /models/LatentSync/inference.py --video {video} --audio {audio} --output {output}
+```
+
+The command must create `{output}`.
 
 ## Model Downloads You May Need
 

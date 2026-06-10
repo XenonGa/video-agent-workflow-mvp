@@ -33,6 +33,24 @@ class Settings(BaseSettings):
     comfy_cfg: float = 7.0
     comfy_seed: int = -1
 
+    animatic_width: int = 1280
+    animatic_height: int = 720
+    animatic_fps: int = 12
+
+    video_backend: str = "animatic"
+    video_command: str | None = None
+    video_output_ext: str = "mp4"
+
+    voice_backend: str = "placeholder"
+    voice_command: str | None = None
+    bgm_backend: str = "placeholder"
+    bgm_command: str | None = None
+    sfx_backend: str = "placeholder"
+    sfx_command: str | None = None
+    sync_backend: str = "passthrough"
+    sync_command: str | None = None
+    compose_backend: str = "ffmpeg"
+
     output_dir: Path = Field(default_factory=lambda: Path("outputs"))
 
     model_config = SettingsConfigDict(
