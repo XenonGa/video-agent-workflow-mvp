@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TypedDict
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 class Character(BaseModel):
@@ -14,6 +14,11 @@ class Character(BaseModel):
     costume: str
     personality: str = ""
     role: str = ""
+
+    @field_validator("age", mode="before")
+    @classmethod
+    def coerce_age(cls, value: object) -> str:
+        return "" if value is None else str(value)
 
 
 class Scene(BaseModel):
@@ -36,6 +41,13 @@ class Shot(BaseModel):
     camera_angle: str = ""
     duration_seconds: float = 5.0
     dialogue: list[str] = Field(default_factory=list)
+
+    @field_validator("duration_seconds", mode="before")
+    @classmethod
+    def coerce_duration(cls, value: object) -> float:
+        if value is None or value == "":
+            return 5.0
+        return float(value)
 
 
 class Script(BaseModel):
