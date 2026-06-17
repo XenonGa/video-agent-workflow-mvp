@@ -11,6 +11,48 @@ import torch
 import torch.nn.functional as F
 
 
+def cpu_offload_vae_decode(self, z, scale):
+    from wan.modules.vae2_2 import unpatchify
+
+    self.clear_cache()
+    if isinstance(scale[0], torch.Tensor):
+        z = z / scale[1].view(1, self.z_dim, 1, 1, 1) + scale[0].view(1, self.z_dim, 1, 1, 1)
+    else:
+        z = z / scale[1] + scale[0]
+
+    iter_ = z.shape[2]
+    x = self.conv2(z)
+    chunks: list[torch.Tensor] = []
+    for i in range(iter_):
+        self._conv_idx = [0]
+        if i == 0:
+            out_chunk = self.decoder(
+                x[:, :, i : i + 1, :, :],
+                feat_cache=self._feat_map,
+                feat_idx=self._conv_idx,
+                first_chunk=True,
+            )
+        else:
+            out_chunk = self.decoder(
+                x[:, :, i : i + 1, :, :],
+                feat_cache=self._feat_map,
+                feat_idx=self._conv_idx,
+            )
+        chunks.append(out_chunk.detach().cpu())
+        del out_chunk
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+
+    del x
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
+
+    out = torch.cat(chunks, 2)
+    out = unpatchify(out, patch_size=2)
+    self.clear_cache()
+    return out
+
+
 def sdpa_attention(
     q: torch.Tensor,
     k: torch.Tensor,
@@ -97,15 +139,18 @@ def main() -> None:
 
     import wan.modules.attention as attention_module
     import wan.modules.model as model_module
+    import wan.modules.vae2_2 as vae_module
 
     attention_module.attention = sdpa_attention
     model_module.attention = sdpa_attention
+    vae_module.WanVAE_.decode = cpu_offload_vae_decode
 
     print(
         f"[wan-v100] FlashAttention bypassed; using chunked PyTorch SDPA "
         f"(chunk={adapter_args.sdpa_chunk_size}).",
         flush=True,
     )
+    print("[wan-v100] VAE decode chunks will be offloaded to CPU before concatenation.", flush=True)
 
     sys.argv = [str(generate_py), *wan_args]
     runpy.run_path(str(generate_py), run_name="__main__")

@@ -31,4 +31,6 @@ If SDPA runs out of memory, lower the chunk:
 ```
 
 This adapter does not install or import FlashAttention. It also converts
-attention inputs to FP16 when CUDA BF16 is unavailable.
+attention inputs to FP16 when CUDA BF16 is unavailable. It also offloads VAE
+decode chunks to CPU before concatenation, which reduces peak GPU memory at the
+end of generation.
