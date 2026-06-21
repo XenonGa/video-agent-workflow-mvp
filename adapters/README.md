@@ -34,3 +34,39 @@ This adapter does not install or import FlashAttention. It also converts
 attention inputs to FP16 when CUDA BF16 is unavailable. It also offloads VAE
 decode chunks to CPU before concatenation, which reduces peak GPU memory at the
 end of generation.
+
+## CosyVoice TTS
+
+`cosyvoice_tts.py` provides a small CLI wrapper for CosyVoice / CosyVoice2. It
+always writes one WAV file and is intended to be called from `VOICE_COMMAND`.
+
+Zero-shot example:
+
+```bash
+/home/gaojx25/envs/cosyvoice/bin/python adapters/cosyvoice_tts.py \
+  --model-dir /home/gaojx25/models/CosyVoice/pretrained_models/CosyVoice2-0.5B \
+  --mode zero-shot \
+  --prompt-audio /home/gaojx25/models/CosyVoice/asset/zero_shot_prompt.wav \
+  --prompt-text "希望你以后能够做的比我还好呦。" \
+  --text "你终于来了。城市地下的秘密不能再隐瞒了。" \
+  --output /home/gaojx25/test_outputs/cosyvoice_test.wav
+```
+
+SFT example, if the model has built-in speakers:
+
+```bash
+/home/gaojx25/envs/cosyvoice/bin/python adapters/cosyvoice_tts.py \
+  --model-dir /home/gaojx25/models/CosyVoice/pretrained_models/CosyVoice-300M-SFT \
+  --model-class cosyvoice \
+  --mode sft \
+  --speaker 中文女 \
+  --text "你终于来了。城市地下的秘密不能再隐瞒了。" \
+  --output /home/gaojx25/test_outputs/cosyvoice_sft_test.wav
+```
+
+Workflow `.env` example:
+
+```env
+VOICE_BACKEND=command
+VOICE_COMMAND=/home/gaojx25/envs/cosyvoice/bin/python /home/gaojx25/video_agent_workflow_mvp/adapters/cosyvoice_tts.py --model-dir /home/gaojx25/models/CosyVoice/pretrained_models/CosyVoice2-0.5B --mode zero-shot --prompt-audio /home/gaojx25/models/CosyVoice/asset/zero_shot_prompt.wav --prompt-text "希望你以后能够做的比我还好呦。" --text {text} --output {output}
+```
