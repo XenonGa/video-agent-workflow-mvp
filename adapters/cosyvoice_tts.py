@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import inspect
 from pathlib import Path
 
 import torchaudio
@@ -10,13 +11,15 @@ def _load_model(model_dir: str, model_class: str, fp16: bool):
     from cosyvoice.cli.cosyvoice import CosyVoice, CosyVoice2
 
     cls = CosyVoice2 if model_class == "cosyvoice2" else CosyVoice
-    return cls(
-        model_dir,
-        load_jit=False,
-        load_trt=False,
-        load_vllm=False,
-        fp16=fp16,
-    )
+    kwargs = {
+        "load_jit": False,
+        "load_trt": False,
+        "load_vllm": False,
+        "fp16": fp16,
+    }
+    signature = inspect.signature(cls)
+    supported_kwargs = {key: value for key, value in kwargs.items() if key in signature.parameters}
+    return cls(model_dir, **supported_kwargs)
 
 
 def _first_result(generator):
