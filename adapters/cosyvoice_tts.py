@@ -34,6 +34,17 @@ def _load_prompt_wav(path: str, sample_rate: int = 16000):
     return torch.from_numpy(wav).float().unsqueeze(0)
 
 
+def _patch_cosyvoice_load_wav() -> None:
+    def load_wav(path, sample_rate):
+        return _load_prompt_wav(str(path), sample_rate)
+
+    import cosyvoice.cli.frontend as frontend_module
+    import cosyvoice.utils.file_utils as file_utils_module
+
+    frontend_module.load_wav = load_wav
+    file_utils_module.load_wav = load_wav
+
+
 def _save_wav(path: Path, speech, sample_rate: int) -> None:
     import soundfile as sf
 
@@ -56,6 +67,12 @@ def main() -> None:
     parser.add_argument("--speaker", default="", help="Speaker id for SFT mode.")
     parser.add_argument("--prompt-audio", default="", help="Reference prompt WAV for zero-shot mode.")
     parser.add_argument("--prompt-text", default="", help="Transcript of the prompt WAV for zero-shot mode.")
+    parser.add_argument(
+        "--prompt-audio-input",
+        choices=["path", "tensor"],
+        default="path",
+        help="Pass reference audio to CosyVoice as a file path or preloaded 16 kHz tensor.",
+    )
     parser.add_argument("--fp16", action=argparse.BooleanOptionalAction, default=True)
     args = parser.parse_args()
 
@@ -72,12 +89,17 @@ def main() -> None:
         if not args.prompt_audio or not args.prompt_text:
             raise ValueError("--prompt-audio and --prompt-text are required when --mode=zero-shot")
 
-        prompt_speech_16k = _load_prompt_wav(args.prompt_audio, 16000)
+        _patch_cosyvoice_load_wav()
+        prompt_audio = (
+            _load_prompt_wav(args.prompt_audio, 16000)
+            if args.prompt_audio_input == "tensor"
+            else str(Path(args.prompt_audio).expanduser())
+        )
         result = _first_result(
             model.inference_zero_shot(
                 args.text,
                 args.prompt_text,
-                prompt_speech_16k,
+                prompt_audio,
                 stream=False,
             )
         )
