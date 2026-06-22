@@ -4,8 +4,6 @@ import argparse
 import inspect
 from pathlib import Path
 
-import torchaudio
-
 
 def _load_model(model_dir: str, model_class: str, fp16: bool):
     from cosyvoice.cli.cosyvoice import CosyVoice, CosyVoice2
@@ -26,6 +24,26 @@ def _first_result(generator):
     for item in generator:
         return item
     raise RuntimeError("CosyVoice did not return any audio result.")
+
+
+def _load_prompt_wav(path: str, sample_rate: int = 16000):
+    import librosa
+    import torch
+
+    wav, _ = librosa.load(Path(path).expanduser(), sr=sample_rate, mono=True)
+    return torch.from_numpy(wav).float().unsqueeze(0)
+
+
+def _save_wav(path: Path, speech, sample_rate: int) -> None:
+    import soundfile as sf
+
+    audio = speech.detach().cpu().float().numpy()
+    if audio.ndim == 2:
+        if audio.shape[0] == 1:
+            audio = audio[0]
+        else:
+            audio = audio.T
+    sf.write(path, audio, sample_rate)
 
 
 def main() -> None:
@@ -53,9 +71,8 @@ def main() -> None:
     else:
         if not args.prompt_audio or not args.prompt_text:
             raise ValueError("--prompt-audio and --prompt-text are required when --mode=zero-shot")
-        from cosyvoice.utils.file_utils import load_wav
 
-        prompt_speech_16k = load_wav(args.prompt_audio, 16000)
+        prompt_speech_16k = _load_prompt_wav(args.prompt_audio, 16000)
         result = _first_result(
             model.inference_zero_shot(
                 args.text,
@@ -65,7 +82,7 @@ def main() -> None:
             )
         )
 
-    torchaudio.save(str(output_path), result["tts_speech"].cpu(), model.sample_rate)
+    _save_wav(output_path, result["tts_speech"], model.sample_rate)
     print(f"saved: {output_path}")
 
 
